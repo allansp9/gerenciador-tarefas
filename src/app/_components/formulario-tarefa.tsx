@@ -81,13 +81,14 @@ export function FormularioTarefa({ tarefa }: { tarefa?: Tarefa }) {
 
   return (
     <form
+      className="formulario"
       onSubmit={(e) => {
         e.preventDefault();
         salvar();
       }}
     >
-      <div>
-        <label htmlFor="titulo">Título:</label>
+      <div className={`campo ${erros.titulo ? 'campo-invalido' : ''}`}>
+        <label htmlFor="titulo">Título</label>
         <input
           type="text"
           id="titulo"
@@ -95,29 +96,47 @@ export function FormularioTarefa({ tarefa }: { tarefa?: Tarefa }) {
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
           disabled={salvando}
+          aria-invalid={!!erros.titulo}
         />
-        {erros.titulo && <p>{erros.titulo}</p>}
+        {erros.titulo && <p className="erro-campo">{erros.titulo}</p>}
       </div>
 
-      <div>
-        <label htmlFor="descricao">Descrição:</label>
+      <div className={`campo ${erros.descricao ? 'campo-invalido' : ''}`}>
+        <label htmlFor="descricao">Descrição (opcional)</label>
         <textarea
           id="descricao"
           name="descricao"
           value={descricao}
           onChange={(e) => setDescricao(e.target.value)}
           disabled={salvando}
+          aria-invalid={!!erros.descricao}
         />
-        {erros.descricao && <p>{erros.descricao}</p>}
+        {erros.descricao && <p className="erro-campo">{erros.descricao}</p>}
       </div>
 
-      {erroServidor && <p>{erroServidor}</p>}
-      {sucesso && <p>{sucesso}</p>}
+      {erroServidor && (
+        <p role="alert" className="mensagem mensagem-erro">
+          {erroServidor}
+        </p>
+      )}
+      {sucesso && (
+        <p role="status" className="mensagem mensagem-sucesso">
+          {sucesso}
+        </p>
+      )}
 
-      <button type="submit" disabled={salvando}>
-        {criar.isPending || atualizar.isPending ? 'Salvando...' : 'Salvar'}
-      </button>
-      <Link href="/">Cancelar</Link>
+      <div className="formulario-acoes">
+        <Link href="/" className="botao botao-secundario">
+          Cancelar
+        </Link>
+        <button
+          type="submit"
+          className="botao botao-primario"
+          disabled={salvando}
+        >
+          {criar.isPending || atualizar.isPending ? 'Salvando...' : 'Salvar'}
+        </button>
+      </div>
     </form>
   );
 }

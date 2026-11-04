@@ -1,14 +1,19 @@
 'use client';
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTRPC } from '@/trpc/client';
 import { useState } from 'react';
+import { useTRPC } from '@/trpc/client';
+
+type Feedback = { tipo: 'sucesso' | 'erro'; texto: string } | null;
 
 export function ListaTarefas() {
   const trpc = useTRPC();
-  const [feedbackMsg, setFeedbackMsg] = useState('');
   const queryClient = useQueryClient();
+  const [feedback, setFeedback] = useState<Feedback>(null);
+
+  // Os dados já chegam prontos do servidor (via HydrateClient),
+  // então esta consulta não dispara uma nova requisição ao carregar.
   const {
     data: tarefas,
     isPending,
@@ -21,44 +26,75 @@ export function ListaTarefas() {
     variables,
   } = useMutation(
     trpc.tarefa.deletar.mutationOptions({
-      // Invalida a query de listagem de tarefas para que ela seja recarregada.
       onSuccess: () => {
+        // Marca a listagem como desatualizada para que seja buscada de novo.
         queryClient.invalidateQueries({
           queryKey: trpc.tarefa.listar.queryKey(),
         });
-        setFeedbackMsg('Tarefa deletada com sucesso.');
+        setFeedback({ tipo: 'sucesso', texto: 'Tarefa excluída com sucesso.' });
       },
       onError: (error) => {
-        setFeedbackMsg(error.message);
+        setFeedback({ tipo: 'erro', texto: error.message });
       },
     }),
   );
 
+  function confirmarExclusao(id: string, titulo: string) {
+    if (confirm(`Excluir a tarefa "${titulo}"?`)) {
+      deletarTarefa({ id });
+    }
+  }
+
   let conteudo;
 
   if (isPending) {
-    conteudo = <p>Carregando tarefas...</p>;
+    conteudo = <p className="estado-vazio">Carregando tarefas...</p>;
   } else if (isError) {
-    conteudo = <p>Não foi possível carregar as tarefas.</p>;
+    conteudo = (
+      <p className="mensagem mensagem-erro">
+        Não foi possível carregar as tarefas.
+      </p>
+    );
   } else if (tarefas.length === 0) {
-    conteudo = <p>Nenhuma tarefa cadastrada.</p>;
+    conteudo = (
+      <div className="estado-vazio">
+        <p>Nenhuma tarefa cadastrada.</p>
+        <Link href="/tarefas/nova" className="botao botao-primario">
+          Criar a primeira tarefa
+        </Link>
+      </div>
+    );
   } else {
     conteudo = (
-      <ul>
+      <ul className="lista">
         {tarefas.map((tarefa) => {
-          const deletando = isDeletando && variables?.id === tarefa.id;
+          // Desabilita apenas o botão da tarefa que está sendo excluída.
+          const excluindo = isDeletando && variables?.id === tarefa.id;
+
           return (
-            <li key={tarefa.id}>
+            <li key={tarefa.id} className="cartao">
               <h2>{tarefa.titulo}</h2>
               {tarefa.descricao && <p>{tarefa.descricao}</p>}
-              <small>Criada em {formatarData(tarefa.dataCriacao)}</small>
-              <Link href={`/tarefas/${tarefa.id}/editar`}>Editar</Link>
-              <button
-                onClick={() => deletarTarefa({ id: tarefa.id })}
-                disabled={deletando}
-              >
-                {deletando ? 'Deletando...' : 'Deletar'}
-              </button>
+              <div className="cartao-rodape">
+                <span className="data">
+                  Criada em {formatarData(tarefa.dataCriacao)}
+                </span>
+                <div className="acoes">
+                  <Link
+                    href={`/tarefas/${tarefa.id}/editar`}
+                    className="botao botao-secundario"
+                  >
+                    Editar
+                  </Link>
+                  <button
+                    className="botao botao-perigo"
+                    onClick={() => confirmarExclusao(tarefa.id, tarefa.titulo)}
+                    disabled={excluindo}
+                  >
+                    {excluindo ? 'Excluindo...' : 'Excluir'}
+                  </button>
+                </div>
+              </div>
             </li>
           );
         })}
@@ -68,15 +104,19 @@ export function ListaTarefas() {
 
   return (
     <div>
-      {feedbackMsg && <p>{feedbackMsg}</p>}
+      {feedback && (
+        <p role="status" className={`mensagem mensagem-${feedback.tipo}`}>
+          {feedback.texto}
+        </p>
+      )}
       {conteudo}
     </div>
   );
 }
 
 function formatarData(timestamp: number) {
-  // O fuso fixo evita que o servidor e navegador gerem textos diferentes para a mesma data,
-  // o que quebraria a hidratação.
+  // O fuso fixo evita que servidor e navegador gerem textos diferentes
+  // para a mesma data, o que quebraria a hidratação.
   return new Date(timestamp).toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     dateStyle: 'short',

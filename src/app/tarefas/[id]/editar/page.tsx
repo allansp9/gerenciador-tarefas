@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { notFound } from 'next/navigation';
 import { TRPCError } from '@trpc/server';
 import { caller } from '@/trpc/server';
@@ -27,7 +29,10 @@ export default async function EditarTarefaPage({
 
   return (
     <main>
-      <h1>Editar tarefa</h1>
+      <Link href="/" className="voltar">
+        ← Voltar para a lista
+      </Link>
+      <h1 className="titulo-pagina">Editar tarefa</h1>
       <FormularioTarefa tarefa={tarefa} />
     </main>
   );

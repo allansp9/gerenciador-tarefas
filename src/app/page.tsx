@@ -12,8 +12,12 @@ export default async function Home() {
   await getQueryClient().prefetchQuery(trpc.tarefa.listar.queryOptions());
   return (
     <main>
-      <h1>Minhas tarefas</h1>
-      <Link href="/tarefas/nova">Nova tarefa</Link>
+      <div className="cabecalho">
+        <h1>Minhas tarefas</h1>
+        <Link href="/tarefas/nova" className="botao botao-primario">
+          + Nova tarefa
+        </Link>
+      </div>
       <HydrateClient>
         <ListaTarefas />
       </HydrateClient>

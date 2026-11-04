@@ -25,7 +25,7 @@ Acesse `http://localhost:3000`.
 
 ## Estrutura
 
-```
+```text
 src/
 ├── app/
 │   ├── page.tsx                      # Listagem (SSR)
