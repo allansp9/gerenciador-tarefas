@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gerenciador de Tarefas
 
-## Getting Started
+Aplicação simples de gerenciamento de tarefas feita com **Next.js 15 (App Router)** e **tRPC**, com as tarefas mantidas em memória no servidor.
 
-First, run the development server:
+## Como executar
+
+Pré-requisito: Node.js 18.18 ou superior.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Acesse `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> Como os dados ficam em memória, as tarefas são apagadas sempre que o servidor é reiniciado.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Funcionalidades
 
-## Learn More
+- Listagem de tarefas com **Server-Side Rendering**
+- Criação e edição de tarefas por formulário com validação
+- Exclusão direto na listagem, com mensagem de sucesso ou erro
+- Tratamento de erros do backend (ex.: tarefa inexistente) exibido na interface
+- Estados de carregamento, com botões desabilitados durante as requisições
 
-To learn more about Next.js, take a look at the following resources:
+## Estrutura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/
+│   ├── page.tsx                      # Listagem (SSR)
+│   ├── tarefas/nova/page.tsx         # Criação
+│   ├── tarefas/[id]/editar/page.tsx  # Edição
+│   ├── _components/                  # Componentes de cliente (lista e formulário)
+│   └── api/trpc/[trpc]/route.ts      # Endpoint HTTP do tRPC
+├── schemas/tarefa.ts                 # Schemas Zod compartilhados entre front e back
+├── server/banco-em-memoria.ts        # Armazenamento em memória
+└── trpc/
+    ├── init.ts                       # Inicialização do tRPC
+    ├── routers/                      # Routers e procedures (CRUD)
+    ├── client.tsx                    # Cliente para componentes do navegador
+    ├── server.tsx                    # Acesso direto ao router na SSR
+    └── query-client.ts               # Configuração do React Query
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Principais decisões
 
-## Deploy on Vercel
+- **Next.js 15**: o enunciado pede a v15 explicitamente; por isso foi usada essa versão, mesmo já existindo a 16.
+- **SSR na listagem**: a página é renderizada a cada requisição (`dynamic = 'force-dynamic'`), pois a lista muda constantemente e não poderia ser gerada estaticamente. O servidor busca as tarefas chamando o router diretamente, sem HTTP, e envia os dados já carregados ao React Query do navegador.
+- **Validação compartilhada**: o mesmo schema Zod valida o formulário no navegador (resposta imediata ao usuário) e as procedures no servidor (garantia de segurança, já que os tipos do TypeScript não existem em tempo de execução).
+- **Códigos de erro**: ids com formato inválido retornam `BAD_REQUEST` (validação do Zod) e ids inexistentes retornam `NOT_FOUND`, separando "pedido mal formado" de "recurso inexistente".
+- **id e data de criação gerados no servidor**: o cliente não pode definir esses valores.
+- **Duas páginas, um formulário**: criação e edição têm URLs próprias e necessidades diferentes (a edição busca a tarefa no servidor), mas reaproveitam o mesmo componente de formulário.
+- **Atualização completa**: a edição sempre envia título e descrição, evitando a ambiguidade de campos ausentes.
+- **Armazenamento no `globalThis`**: garante uma única lista mesmo com o hot reload do modo de desenvolvimento e com os diferentes pacotes gerados pelo Next.
+- **Data como número**: `dataCriacao` é um timestamp em milissegundos, já que o JSON não possui tipo de data. Uma alternativa seria usar a biblioteca **superjson** como transformer do tRPC, que serializa e reconstrói objetos `Date` automaticamente; optei pelo número para manter a configuração mais simples.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tecnologias
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 15, React, TypeScript, tRPC v11, TanStack React Query, Zod.
